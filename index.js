@@ -27,7 +27,7 @@ const exerciseSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  date: String
+  date: Date
 });
 
 const User = mongoose.model('User', userSchema);
@@ -79,7 +79,7 @@ app.post('/api/users/:id/exercises', function(req, res){
     }else{
       date = new Date();
     }
-    var exercise = new Exercise({userId: user_id, description: req.body.description, duration: req.body.duration, date: date.toDateString()});
+    var exercise = new Exercise({userId: user_id, description: req.body.description, duration: req.body.duration, date: date});
     exercise.save(function(err, exer){
       if(err){
         res.send('error occured while saving.');
@@ -89,7 +89,7 @@ app.post('/api/users/:id/exercises', function(req, res){
         username: usr.username,
         description: exer.description,
         duration: exer.duration,
-        date: exer.date,
+        date: exer.date.toDateString(),
         _id: usr._id
       });
     });
@@ -105,18 +105,40 @@ app.get('/api/users/:id/logs', function(req, res){
       res.send('error: could not find one.');
       return console.log(err);
     }
-    Exercise.find({userId: user_id}, function(err, data){
-      if(err){
-        console.log(err);
-      }
-      var count = data.length;
-      res.json({
-        username: usr.username,
-        count: count,
-        _id: usr._id,
-        log: data
+    let query = {userId: user_id};
+    let dateFilter = {}
+    
+    if(from){
+      dateFilter['$gte'] = new Date(from);
+    }
+    if(to){
+      dateFilter['$lte'] = new Date(to);
+    }
+    if(from || to){
+      query.date = dateFilter;
+    }
+    console.log(query);
+    Exercise.find(query)
+      .limit(Number(limit))
+      .exec(function(err, data){
+        if(err){
+          console.log(err);
+        }
+        var count = data.length;
+        dataParsed = data.map((obj) => {
+          return {
+            description: obj.description,
+            duration: obj.duration,
+            date: obj.date.toDateString()
+          }
+        });
+        res.json({
+          username: usr.username,
+          count: count,
+          _id: usr._id,
+          log: dataParsed
+        });
       });
-    });
   });
 });
 
