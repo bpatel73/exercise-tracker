@@ -75,10 +75,12 @@ app.post('/api/users/:id/exercises', function(req, res){
     }
     let date;
     if(req.body.date){
-      date = new Date(req.body.date);
+      var parts = req.body.date.split('-');
+      date = new Date(parts[0], parts[1]-1, parts[2]);
     }else{
       date = new Date();
     }
+    console.log(date, date.toUTCString())
     var exercise = new Exercise({userId: user_id, description: req.body.description, duration: req.body.duration, date: date});
     exercise.save(function(err, exer){
       if(err){
@@ -99,7 +101,6 @@ app.post('/api/users/:id/exercises', function(req, res){
 app.get('/api/users/:id/logs', function(req, res){
   var user_id = req.params.id;
   const {from, to, limit} = req.query;
-  console.log(from, to, limit);
   User.findOne({_id: user_id}, function(err, usr){
     if(err){
       res.send('error: could not find one.');
@@ -117,7 +118,7 @@ app.get('/api/users/:id/logs', function(req, res){
     if(from || to){
       query.date = dateFilter;
     }
-    console.log(query);
+    
     Exercise.find(query)
       .limit(Number(limit))
       .exec(function(err, data){
@@ -126,10 +127,11 @@ app.get('/api/users/:id/logs', function(req, res){
         }
         var count = data.length;
         dataParsed = data.map((obj) => {
+          console.log(obj.date.getFullYear(), obj.date.getMonth()+1, obj.date.getDate());
           return {
             description: obj.description,
             duration: obj.duration,
-            date: obj.date.toDateString()
+            date: new Date(obj.date.getFullYear(), obj.date.getMonth(), obj.date.getDate()).toDateString()
           }
         });
         res.json({
